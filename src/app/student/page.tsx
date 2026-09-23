@@ -13,7 +13,7 @@ function QuizCardView({ card, section }: { card: QuizCard; section: Section }) {
   return (
     <li className={`${cardClass} flex flex-col gap-3 p-4`}>
       <div className="flex items-start justify-between gap-3">
-        <h3 dir="auto" className="min-w-0 break-words text-base font-semibold">
+        <h3 dir="auto" className="min-w-0 flex-1 break-words text-base font-semibold">
           {card.title}
         </h3>
         {card.attemptStatus && <StatusBadge status={card.attemptStatus} />}

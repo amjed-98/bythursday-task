@@ -17,7 +17,7 @@ export function QuizTable({ quizzes, now, showTeacher = false }: QuizTableProps)
         <li key={quiz.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
           <div className="min-w-0 flex-1 space-y-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h3 dir="auto" className="min-w-0 break-words font-semibold">
+              <h3 dir="auto" className="min-w-0 flex-1 break-words font-semibold">
                 {quiz.title}
               </h3>
               <StatusBadge status={windowState(quiz, now)} />
