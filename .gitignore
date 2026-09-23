@@ -16,3 +16,4 @@ next-env.d.ts
 .vscode/
 npm-debug.log*
 pnpm-debug.log*
+.claude/
