@@ -23,7 +23,10 @@ services:
       retries: 30
 
   migrate:
-    build: .
+    build: &app-build
+      context: .
+      # Set DOCKER_BUILD_NETWORK=host if the build cannot reach the npm registry (e.g. behind a VPN).
+      network: ${DOCKER_BUILD_NETWORK:-default}
     image: bythursday-quiz-app
     command: ["pnpm", "db:setup"]
     pull_policy: build
@@ -33,7 +36,7 @@ services:
         condition: service_healthy
 
   app:
-    build: .
+    build: *app-build
     image: bythursday-quiz-app
     pull_policy: build
     environment: *app-env
