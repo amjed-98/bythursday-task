@@ -12,11 +12,12 @@ import {
   unique,
   index,
 } from "drizzle-orm/pg-core";
+import { ROLES, type Role } from "@/domain/roles";
 
-export const roleEnum = pgEnum("role", ["student", "teacher", "admin"]);
+export const roleEnum = pgEnum("role", ROLES);
 export const attemptStatusEnum = pgEnum("attempt_status", ["in_progress", "submitted", "expired"]);
 
-export type Role = (typeof roleEnum.enumValues)[number];
+export type { Role };
 export type AttemptStatus = (typeof attemptStatusEnum.enumValues)[number];
 
 const utc = (name: string) => timestamp(name, { withTimezone: true, mode: "date" });
