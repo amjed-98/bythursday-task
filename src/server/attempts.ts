@@ -95,11 +95,14 @@ async function finaliseIfExpired(db: Db, attempt: AttemptRow, now: Date): Promis
   });
 }
 
-export async function finaliseExpiredAttempts(db: Db, quizId: number, now: Date): Promise<void> {
+type StaleAttemptFilter = { quizId: number } | { studentId: number };
+
+export async function finaliseExpiredAttempts(db: Db, filter: StaleAttemptFilter, now: Date): Promise<void> {
+  const scope = "quizId" in filter ? eq(attempts.quizId, filter.quizId) : eq(attempts.studentId, filter.studentId);
   const stale = await db
     .select()
     .from(attempts)
-    .where(and(eq(attempts.quizId, quizId), eq(attempts.status, "in_progress"), lte(attempts.deadline, now)));
+    .where(and(scope, eq(attempts.status, "in_progress"), lte(attempts.deadline, now)));
   for (const attempt of stale) await finaliseIfExpired(db, attempt, now);
 }
 
