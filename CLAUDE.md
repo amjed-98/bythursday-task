@@ -33,6 +33,7 @@ Run lint, typecheck, unit and integration tests before every commit.
 - **Never send `options.is_correct` to a student during an attempt.** Only `getAttemptResult` exposes it, and only after `closesAt`. There is a test for this.
 - **Time comes from the server.** Services take `now: Date`; pages and actions pass `new Date()`. Never trust a time from the client.
 - **Every server action and page calls `requireActor`.** Middleware only redirects for convenience.
+- **Route access is default-deny.** A new top-level route redirects every user home until you add it to `SECTION_ROLES` in `src/lib/route-access.ts`.
 - **Attempts are unique per (student, quiz).** Use `ON CONFLICT`, not check-then-insert.
 - **Scores are integer centi-points** (`CENTI_PER_POINT = 100`). Display them with `formatCenti`.
 - **Imports are all-or-nothing:** validate every row first, then write in one transaction.

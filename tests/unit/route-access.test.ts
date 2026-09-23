@@ -18,8 +18,12 @@ describe("canAccessPath", () => {
     expect(canAccessPath(path, role)).toBe(expected);
   });
 
-  it("does not treat a path that merely starts with the same letters as a protected section", () => {
-    expect(canAccessPath("/administrator", "student")).toBe(true);
+  it("does not treat a path that merely starts with the same letters as a section as part of it", () => {
+    expect(canAccessPath("/administrator", "admin")).toBe(false);
+  });
+
+  it.each(["student", "teacher", "admin"] as const)("denies %s any path outside the known sections", (role) => {
+    expect(canAccessPath("/api/internal-report", role)).toBe(false);
   });
 });
 
