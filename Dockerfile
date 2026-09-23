@@ -5,6 +5,7 @@ RUN corepack enable && corepack prepare pnpm@10.28.2 --activate
 WORKDIR /app
 
 FROM base AS deps
+ENV npm_config_fetch_retries=6 npm_config_fetch_retry_mintimeout=10000 npm_config_fetch_timeout=120000
 COPY package.json pnpm-lock.yaml .npmrc ./
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
