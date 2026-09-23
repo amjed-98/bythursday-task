@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-inter), var(--font-arabic), ui-sans-serif, system-ui, sans-serif;
+  --color-ink: oklch(22% 0.02 260);
+  --color-muted: oklch(52% 0.02 260);
+  --color-line: oklch(90% 0.01 260);
+  --color-canvas: oklch(98.5% 0.005 90);
+  --color-surface: oklch(100% 0 0);
+  --color-brand: oklch(52% 0.15 165);
+  --color-brand-strong: oklch(44% 0.14 165);
+  --color-brand-soft: oklch(95% 0.04 165);
+  --color-warn: oklch(62% 0.17 55);
+  --color-warn-soft: oklch(96% 0.04 70);
+  --color-danger: oklch(55% 0.2 25);
+  --color-danger-soft: oklch(96% 0.03 25);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-brand);
+  outline-offset: 2px;
+}
