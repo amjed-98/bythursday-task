@@ -1,0 +1,47 @@
+name: bythursday-quiz
+
+x-app-env: &app-env
+  DATABASE_URL: postgres://quiz:quiz@db:5432/quiz
+  AUTH_SECRET: ${AUTH_SECRET:-local-demo-secret-change-me-in-production-0123456789}
+  AUTH_TRUST_HOST: "true"
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: quiz
+      POSTGRES_PASSWORD: quiz
+      POSTGRES_DB: quiz
+    ports:
+      - "${DB_PORT:-5433}:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U quiz -d quiz"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  migrate:
+    build: .
+    image: bythursday-quiz-app
+    command: ["pnpm", "db:setup"]
+    pull_policy: build
+    environment: *app-env
+    depends_on:
+      db:
+        condition: service_healthy
+
+  app:
+    build: .
+    image: bythursday-quiz-app
+    pull_policy: build
+    environment: *app-env
+    ports:
+      - "3000:3000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  db-data:
