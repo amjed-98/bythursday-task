@@ -1,20 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
+import { login, signOut } from "./helpers";
 
 const ENGLISH_QUIZ_TITLE = "English Vocabulary — Unit 3";
 const STUDENT_PASSWORD = "e2e-pass-123";
-
-async function login(page: Page, username: string, password: string): Promise<void> {
-  await page.goto("/login");
-  await page.getByLabel("Username").fill(username);
-  await page.getByLabel("Password").fill(password);
-  await page.getByRole("button", { name: "Sign in" }).click();
-  await page.waitForURL((url) => !url.pathname.startsWith("/login"));
-}
-
-async function signOut(page: Page): Promise<void> {
-  await page.getByRole("button", { name: "Sign out" }).click();
-  await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
-}
 
 /** A fresh student per run keeps the one-attempt rule from failing re-runs, and exercises the import UI. */
 async function importFreshStudent(page: Page): Promise<string> {

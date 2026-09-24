@@ -22,9 +22,9 @@
 ## How the output was checked
 
 Automated:
-- **Unit tests (77):** scoring for 0%, 25% and 100% penalty and the floor case; deadline and window boundaries; Amman/UTC conversion; route access by role; login throttle; import parsing (xlsx numeric and rich-text cells, BOM CSV, Arabic) and row validation.
+- **Unit tests (95):** scoring for 0%, 25% and 100% penalty and the floor case; deadline and window boundaries; Amman/UTC conversion; route access by role; every page and server action under a protected section calls `requireActor`; login throttle; import parsing (xlsx numeric and rich-text cells, BOM CSV, Arabic) and row validation.
 - **Integration tests (56) against real Postgres:** 20 concurrent starts create 1 attempt; late and replayed answers rejected; expired attempts finalised and scored; options from another question rejected; other students' attempts forbidden; a student can't open a quiz for another class or outside its window; the attempt payload contains no correctness data; review hidden until close; teacher A can't read or edit teacher B's quiz or results; imports with one bad row commit nothing; moving the close time earlier mid-attempt stops late answers and keeps the review hidden.
-- **Playwright e2e** at 360px: admin imports a fresh student through the UI; the student signs in, takes the quiz, submits and sees the score; the page has no horizontal scroll; `/teacher` redirects the student away.
+- **Playwright e2e** at 360px: admin imports a fresh student through the UI; the student signs in, takes the quiz, submits and sees the score; the page has no horizontal scroll. A second spec signs in as a student and requests every teacher and admin page (all land on `/student`) and the results CSV export (no CSV comes back).
 - `tsc --noEmit` and ESLint clean; `next build` passes; `docker compose up` checked from a fresh `git clone`.
 
 Manual (in the AI session): reading server logs and `pg_stat_activity` when the seed looked hung, reproducing the login flow with curl and a cookie jar, and checking the seeded data against the logins in the README.
