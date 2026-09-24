@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { answers, attempts } from "@/db/schema";
+import { answers, attempts, quizzes } from "@/db/schema";
 import { DomainError } from "@/domain/errors";
 import {
   getAttemptResult,
@@ -123,6 +123,31 @@ describe("deadline enforcement", () => {
 
     const [row] = await testDb.select().from(attempts).where(eq(attempts.id, attemptId));
     expect(row?.status).toBe("expired");
+  });
+});
+
+describe("start racing a quiz edit", () => {
+  const LOCK_WAIT_MS = 300;
+
+  it("re-checks the window after waiting for a concurrent edit that closes the quiz", async () => {
+    const { student, quiz } = await createStandardSetup();
+
+    let start: Promise<string> = Promise.resolve("not started");
+    await testDb.transaction(async (tx) => {
+      await tx.select().from(quizzes).where(eq(quizzes.id, quiz.quizId)).for("update");
+      start = startAttempt(testDb, student, quiz.quizId, NOW).then(
+        () => "started",
+        (error: DomainError) => error.code,
+      );
+      await new Promise((resolve) => setTimeout(resolve, LOCK_WAIT_MS));
+      await tx
+        .update(quizzes)
+        .set({ opensAt: minutesFrom(NOW, -60), closesAt: minutesFrom(NOW, -1) })
+        .where(eq(quizzes.id, quiz.quizId));
+    });
+
+    await expect(start).resolves.toBe("NOT_OPEN");
+    expect(await testDb.select().from(attempts).where(eq(attempts.quizId, quiz.quizId))).toHaveLength(0);
   });
 });
 

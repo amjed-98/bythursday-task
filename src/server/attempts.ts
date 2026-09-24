@@ -1,6 +1,6 @@
 import { and, eq, lte } from "drizzle-orm";
 import type { Db } from "@/db/client";
-import { answers, attempts, options, questions, type AttemptStatus } from "@/db/schema";
+import { answers, attempts, options, questions, quizzes, type AttemptStatus } from "@/db/schema";
 import type { DbOrTx, Tx } from "@/db/types";
 import { computeDeadline, isPastDeadline, isReviewOpen, remainingMs, windowState } from "@/domain/deadline";
 import { DomainError } from "@/domain/errors";
@@ -106,30 +106,39 @@ export async function finaliseExpiredAttempts(db: Db, filter: StaleAttemptFilter
   for (const attempt of stale) await finaliseIfExpired(db, attempt, now);
 }
 
-/** Idempotent: a second call (refresh, second tab, replay) resumes the existing attempt. */
+/**
+ * Idempotent: a second call (refresh, second tab, replay) resumes the existing attempt.
+ * The quiz row is share-locked while the window is checked and the attempt inserted, so a concurrent
+ * teacher edit (which takes FOR UPDATE) cannot close the window or swap questions in between.
+ */
 export async function startAttempt(db: Db, actor: Actor, quizId: number, now: Date): Promise<{ attemptId: number }> {
   assertRole(actor, ["student"]);
-  const quiz = await loadQuizForStudent(db, actor, quizId);
+  await loadQuizForStudent(db, actor, quizId);
 
-  const existing = await findAttempt(db, actor.id, quizId);
-  if (existing) return { attemptId: existing.id };
+  return db.transaction(async (tx) => {
+    const [quiz] = await tx.select().from(quizzes).where(eq(quizzes.id, quizId)).for("share");
+    if (!quiz) throw new DomainError("NOT_FOUND", "Quiz not found");
 
-  if (windowState(quiz, now) !== "open") throw new DomainError("NOT_OPEN", "This quiz is not open right now");
+    const existing = await findAttempt(tx, actor.id, quizId);
+    if (existing) return { attemptId: existing.id };
 
-  await db
-    .insert(attempts)
-    .values({
-      studentId: actor.id,
-      quizId,
-      startedAt: now,
-      deadline: computeDeadline(now, quiz.timeLimitMinutes, quiz.closesAt),
-      status: "in_progress",
-    })
-    .onConflictDoNothing({ target: [attempts.studentId, attempts.quizId] });
+    if (windowState(quiz, now) !== "open") throw new DomainError("NOT_OPEN", "This quiz is not open right now");
 
-  const created = await findAttempt(db, actor.id, quizId);
-  if (!created) throw new Error(`Attempt for student ${actor.id} on quiz ${quizId} vanished after insert`);
-  return { attemptId: created.id };
+    await tx
+      .insert(attempts)
+      .values({
+        studentId: actor.id,
+        quizId,
+        startedAt: now,
+        deadline: computeDeadline(now, quiz.timeLimitMinutes, quiz.closesAt),
+        status: "in_progress",
+      })
+      .onConflictDoNothing({ target: [attempts.studentId, attempts.quizId] });
+
+    const created = await findAttempt(tx, actor.id, quizId);
+    if (!created) throw new Error(`Attempt for student ${actor.id} on quiz ${quizId} vanished after insert`);
+    return { attemptId: created.id };
+  });
 }
 
 export async function getAttemptView(db: Db, actor: Actor, quizId: number, now: Date): Promise<AttemptView | null> {
