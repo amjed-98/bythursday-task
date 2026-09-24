@@ -2,6 +2,17 @@
 
 The main product decisions were made before any code was written, in a Q&A with the AI assistant (see [AI_USAGE.md](AI_USAGE.md)), and recorded in [docs/TICKET-BT-1.md](docs/TICKET-BT-1.md). This file covers what those decisions mean in practice, the assumptions behind them, what I added, and what I left out.
 
+## Stack, and why
+
+This is the stack on my profile, so the choice is mostly about where it helps this brief.
+
+- **Next.js 15 (App Router, server actions), TypeScript strict.** One app and one container for the student pages, the teacher and admin screens, and the logic behind them. Pages render on the server, so a cheap phone gets finished HTML instead of a large client bundle. Every rule that matters (timer, one attempt, answer secrecy, who can see what) runs on the server, and a server action is just a server function with a role check at the top.
+- **Postgres 16 instead of SQLite.** The hard rules are concurrency rules, and Postgres settles them in the database: a unique constraint with `ON CONFLICT` for one attempt, `SELECT … FOR UPDATE` / `FOR SHARE` row locks so a late save, an edit and a start can't interleave, and `timestamptz` for deadlines. Docker Compose makes it a one-command start anyway.
+- **Drizzle ORM.** Typed queries that stay close to SQL, so the locks and `least(…)` above are visible in the code. Migrations are generated and committed in `drizzle/`.
+- **Auth.js credentials.** The centre hands out usernames, so username and password with bcrypt and an httpOnly session cookie. No email, OAuth or external service is needed to run it.
+- **Tailwind v4, zod, ExcelJS.** Tailwind for a clean phone-first UI without a designer. zod validates every input at the boundary, the same way for forms and spreadsheet rows. ExcelJS reads `.xlsx` with Arabic text intact.
+- **Vitest and Playwright.** Unit tests for the pure rules, integration tests against a real Postgres (the locks can't be tested against a mock), and an end-to-end test on a phone-sized screen.
+
 ## Core rules and how they are enforced
 
 | Rule | Where it lives | Why this way |
