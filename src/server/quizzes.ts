@@ -118,6 +118,17 @@ async function loadQuestionInputs(db: Db | Tx, quizId: number): Promise<Question
   }));
 }
 
+/**
+ * Keeps `deadline <= closesAt` for attempts already running when the close time moves earlier.
+ * Without it, the review would open at the new close time while those students could still answer.
+ */
+async function capRunningDeadlines(tx: Tx, quizId: number, closesAt: Date): Promise<void> {
+  await tx
+    .update(attempts)
+    .set({ deadline: sql`least(${attempts.deadline}, ${closesAt.toISOString()}::timestamptz)` })
+    .where(and(eq(attempts.quizId, quizId), eq(attempts.status, "in_progress")));
+}
+
 /** Once a student has started, questions and the penalty are frozen so every attempt is scored by the same rules. */
 export async function updateQuiz(db: Db, actor: Actor, quizId: number, rawInput: QuizInput): Promise<void> {
   const quiz = await loadManagedQuiz(db, actor, quizId);
@@ -143,6 +154,7 @@ export async function updateQuiz(db: Db, actor: Actor, quizId: number, rawInput:
         penaltyPercent: input.penaltyPercent,
       })
       .where(eq(quizzes.id, quizId));
+    await capRunningDeadlines(tx, quizId, input.closesAt);
     await replaceClasses(tx, quizId, input.classIds);
     if (questionsChanged) {
       await tx.delete(questions).where(eq(questions.quizId, quizId));

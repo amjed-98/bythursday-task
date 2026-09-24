@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { QuizInput } from "@/domain/quiz-input";
-import { startAttempt } from "@/server/attempts";
+import { getAttemptView, saveAnswer, startAttempt, submitAttempt } from "@/server/attempts";
 import { createQuiz, getQuizForEdit, listQuizzesForActor, updateQuiz } from "@/server/quizzes";
-import { createClass, createUser, hoursFrom, NOW } from "./factories";
+import { createClass, createUser, hoursFrom, minutesFrom, NOW } from "./factories";
 import { testDb } from "./setup";
 
 const quizInput = (classIds: number[], overrides: Partial<QuizInput> = {}): QuizInput => ({
@@ -118,6 +118,32 @@ describe("editing rules", () => {
     await updateQuiz(testDb, owner, quizId, quizInput([classId], { title: "Renamed", closesAt: hoursFrom(NOW, 48) }));
 
     expect(await getQuizForEdit(testDb, owner, quizId)).toMatchObject({ title: "Renamed", isLocked: true });
+  });
+
+  it("rejects an answer saved after an earlier close time set mid-attempt", async () => {
+    const { owner, student, quizId, classId } = await setup();
+    await startAttempt(testDb, student, quizId, NOW);
+    const view = (await getAttemptView(testDb, student, quizId, NOW))!;
+    const question = view.questions[0]!;
+    await updateQuiz(testDb, owner, quizId, quizInput([classId], { closesAt: minutesFrom(NOW, 5) }));
+
+    await expectCode(
+      saveAnswer(testDb, student, { attemptId: view.attemptId, questionId: question.id, optionId: question.options[0]!.id }, minutesFrom(NOW, 6)),
+      "ATTEMPT_CLOSED",
+    );
+  });
+
+  it("keeps the review closed while an attempt started before an earlier close time is still running", async () => {
+    const { owner, student, quizId, classId } = await setup();
+    const finisher = await createUser("student", classId);
+    const { attemptId } = await startAttempt(testDb, finisher, quizId, NOW);
+    await submitAttempt(testDb, finisher, attemptId, minutesFrom(NOW, 1));
+    await startAttempt(testDb, student, quizId, minutesFrom(NOW, 2));
+    await updateQuiz(testDb, owner, quizId, quizInput([classId], { closesAt: minutesFrom(NOW, 5) }));
+
+    const view = await getAttemptView(testDb, student, quizId, minutesFrom(NOW, 6));
+
+    expect(view?.status).toBe("expired");
   });
 
   it("rejects an unknown class id", async () => {

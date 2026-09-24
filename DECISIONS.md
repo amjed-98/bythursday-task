@@ -12,6 +12,7 @@ The main product decisions were made before any code was written, in a Q&A with 
 | **Late submit** | A submit that arrives on or after the deadline doesn't fail: the attempt becomes `expired`, and answers saved in time still count. | Auto-submit at 0:00 plus network delay would otherwise show the student an error at the worst moment. |
 | **Negative marking** | `scoreAttempt()` in `src/domain/scoring.ts`: correct `+points`, wrong `−penalty% × points`, blank `0`, total floored at 0. | Scores are stored as **integer centi-points** (1 point = 100), so 25% of a 1-point question is exactly 25, with no rounding errors. |
 | **Answer secrecy** | The attempt view never selects `is_correct`. The per-question review is built only when `now ≥ closesAt`. | A test serialises the whole attempt payload and checks it contains no "correct" field. |
+| **Moving the close time earlier** | In the same transaction, `updateQuiz` caps the stored deadline of every running attempt at the new `closesAt` (`least(deadline, closesAt)`). Moving it later leaves running deadlines alone. | Keeps `deadline ≤ closesAt` true for every attempt. Without it, the review would open at the new close time while students who started earlier could still answer, and see answers shared by those who had finished. Found in a review after the first submission; covered by two integration tests. |
 | **Questions locked after the first attempt** | `updateQuiz` rejects changes to questions **or the penalty** once any attempt exists. Title, classes and schedule stay editable. | The ticket locks questions. I also lock the penalty, because changing it mid-quiz would score students differently for the same answers. |
 | **Authorization** | Every service takes an `actor` and checks it (`assertRole`, `canManageQuiz`). Middleware redirects by URL section, and each page and server action checks again with `requireActor`. | Hiding links is not a security check. Tests call the services directly with the wrong role or the wrong teacher. |
 | **Imports** | Parse (`xlsx`/`csv`) → validate every row with zod → write everything in one transaction. | Any error returns every bad row with its spreadsheet row number, and nothing is saved. The seed uses the same code path, so the sample files are loaded exactly the way real ones will be. |
@@ -61,6 +62,7 @@ Also not built:
 
 - The login throttle is per process and in memory, so a restart clears it.
 - The server clock is the authority, so the host needs correct time (NTP).
+- A student's class is read from the session (12 hours). If an admin moves a student to another class by re-importing, their quiz access follows the old class until they sign in again.
 - If the connection drops, answers aren't saved until the student taps **Retry** (it shows "Not saved"). They aren't stored offline.
 - The teacher results table scrolls sideways on narrow phones. The student flow was the priority at 360px.
 
