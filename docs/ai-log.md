@@ -27,7 +27,15 @@ Tool: Claude Code (Claude Opus) in the Claude desktop app.
 | `docker compose up` failed with `EAI_AGAIN registry.npmjs.org`. | Build log | Containers on the Docker bridge have no internet on this machine (VPN), but host networking works. Added an opt-in `DOCKER_BUILD_NETWORK=host`; the default is unchanged for reviewers. |
 | The runtime image would have had corepack download pnpm at container start. | Reading the Dockerfile while debugging the above | `corepack prepare pnpm@10.28.2 --activate` in the base layer. |
 | The e2e max score was written as 20; the sample English quiz sums to 21. | Summed the points before running the test | Fixed the assertion. |
+| Moving a quiz's close time earlier while students were answering left their stored deadlines past the new close time, so the review could open while they could still answer. | A fresh review of the branch against the acceptance criteria (session 3) | `updateQuiz` caps running deadlines at the new `closesAt`, with two integration tests seen failing first. |
 
 ### Honest notes on process
 - Most tests were written first and seen failing (route access, login throttle, import parser and validator). For scoring/deadline the implementation was typed in the same step because dependencies were still installing, and `quiz-input` tests were written right after the schema. All of them run green now; none were edited to match a bug.
 - The AI wrote nearly all of the code in one session, from the plan. The product decisions were mine (session 1).
+
+## 2026-09-24
+
+### Session 3: verification
+- Ran the session 2 prompt again in a new worktree. Claude noticed the plan and all 13 tasks were already committed, and asked instead of redoing them. I chose "verify against acceptance criteria".
+- Checked: lint, typecheck, unit, integration, e2e; `docker compose up` on a fresh volume under a separate project name; README logins; the Arabic quiz at 360px (Playwright, right-to-left computed direction, no horizontal scroll).
+- A read-only review agent found the close-time gap above, which I confirmed in the code before fixing.
