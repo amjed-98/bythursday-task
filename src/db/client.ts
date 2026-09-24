@@ -5,7 +5,8 @@ import * as schema from "./schema";
 export type Db = PostgresJsDatabase<typeof schema>;
 
 export function createDb(url: string, maxConnections = 10): { db: Db; close: () => Promise<void> } {
-  const client = postgres(url, { max: maxConnections });
+  // Notices are informational (e.g. the migrator's "already exists, skipping"); errors still throw.
+  const client = postgres(url, { max: maxConnections, onnotice: () => {} });
   return { db: drizzle(client, { schema }), close: () => client.end() };
 }
 
